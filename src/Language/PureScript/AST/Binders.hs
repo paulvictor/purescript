@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 -- |
 -- Case binders
 --
@@ -10,6 +12,8 @@ import Language.PureScript.AST.Literals
 import Language.PureScript.Names
 import Language.PureScript.Comments
 import Language.PureScript.Types
+import GHC.Generics (Generic)
+import Data.Aeson(ToJSON)
 
 -- |
 -- Data type for binders
@@ -61,7 +65,9 @@ data Binder
   -- A binder with a type annotation
   --
   | TypedBinder SourceType Binder
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance ToJSON Binder
 
 -- Manual Eq and Ord instances for `Binder` were added on 2018-03-05. Comparing
 -- the `SourceSpan` values embedded in some of the data constructors of `Binder`

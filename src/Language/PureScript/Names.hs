@@ -18,6 +18,10 @@ import Data.Aeson
 import Data.Aeson.TH
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+import Data.Aeson.Encoding.Internal(text)
+import qualified Data.ByteString.Lazy as BSL
+
 
 -- | A sum of the possible name types, useful for error and lint messages.
 data Name
@@ -187,6 +191,8 @@ data Qualified a = Qualified (Maybe ModuleName) a
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable, Generic)
 
 instance NFData a => NFData (Qualified a)
+instance (ToJSON a, Show a)  => ToJSONKey (Qualified a) where
+  toJSONKey = ToJSONKeyText (TE.decodeUtf8 . BSL.toStrict . encode) (text . TE.decodeUtf8 . BSL.toStrict . encode)
 
 showQualified :: (a -> Text) -> Qualified a -> Text
 showQualified f (Qualified Nothing a) = f a

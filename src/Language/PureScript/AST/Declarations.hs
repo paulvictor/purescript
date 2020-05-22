@@ -35,6 +35,7 @@ import Language.PureScript.Comments
 import Language.PureScript.Environment
 import qualified Language.PureScript.Bundle as Bundle
 import qualified Language.PureScript.Constants as C
+import Data.Aeson(ToJSON)
 
 import qualified Text.Parsec as P
 
@@ -54,7 +55,9 @@ data TypeSearch
     }
   -- ^ Results of applying type directed search to the previously captured
   -- Environment
-  deriving Show
+  deriving (Show, Generic)
+
+instance ToJSON TypeSearch
 
 onTypeSearchTypes :: (SourceType -> SourceType) -> TypeSearch -> TypeSearch
 onTypeSearchTypes f = runIdentity . onTypeSearchTypesM (Identity . f)
@@ -204,7 +207,9 @@ data ErrorMessageHint
   | ErrorInForeignImport Ident
   | ErrorSolvingConstraint SourceConstraint
   | PositionedError (NEL.NonEmpty SourceSpan)
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance ToJSON ErrorMessageHint
 
 -- | Categories of hints
 data HintCategory
@@ -214,7 +219,9 @@ data HintCategory
   | PositionHint
   | SolverHint
   | OtherHint
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance ToJSON HintCategory
 
 data ErrorMessage = ErrorMessage
   [ErrorMessageHint]
@@ -227,7 +234,9 @@ data ErrorMessage = ErrorMessage
 -- explicitly exported. If the export list is Nothing, everything is exported.
 --
 data Module = Module SourceSpan [Comment] ModuleName [Declaration] (Maybe [DeclarationRef])
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance ToJSON Module
 
 -- | Return a module's name.
 getModuleName :: Module -> ModuleName
@@ -441,7 +450,9 @@ data TypeDeclarationData = TypeDeclarationData
   { tydeclSourceAnn :: !SourceAnn
   , tydeclIdent :: !Ident
   , tydeclType :: !SourceType
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON TypeDeclarationData
 
 overTypeDeclaration :: (TypeDeclarationData -> TypeDeclarationData) -> Declaration -> Declaration
 overTypeDeclaration f d = maybe d (TypeDeclaration . f) (getTypeDeclaration d)
@@ -466,7 +477,9 @@ data ValueDeclarationData a = ValueDeclarationData
   -- ^ Whether or not this value is exported/visible
   , valdeclBinders :: ![Binder]
   , valdeclExpression :: !a
-  } deriving (Show, Functor, Foldable, Traversable)
+  } deriving (Show, Functor, Foldable, Traversable, Generic)
+
+instance ToJSON a => ToJSON (ValueDeclarationData a)
 
 overValueDeclaration :: (ValueDeclarationData [GuardedExpr] -> ValueDeclarationData [GuardedExpr]) -> Declaration -> Declaration
 overValueDeclaration f d = maybe d (ValueDeclaration . f) (getValueDeclaration d)
@@ -539,13 +552,18 @@ data Declaration
   -- dependencies, class name, instance types, member declarations)
   --
   | TypeInstanceDeclaration SourceAnn [Ident] Integer Ident [SourceConstraint] (Qualified (ProperName 'ClassName)) [SourceType] TypeInstanceBody
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance ToJSON Declaration
 
 data ValueFixity = ValueFixity Fixity (Qualified (Either Ident (ProperName 'ConstructorName))) (OpName 'ValueOpName)
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic, ToJSON)
+
 
 data TypeFixity = TypeFixity Fixity (Qualified (ProperName 'TypeName)) (OpName 'TypeOpName)
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic)
+
+instance ToJSON TypeFixity
 
 pattern ValueFixityDeclaration :: SourceAnn -> Fixity -> Qualified (Either Ident (ProperName 'ConstructorName)) -> OpName 'ValueOpName -> Declaration
 pattern ValueFixityDeclaration sa fixity name op = FixityDeclaration sa (Left (ValueFixity fixity name op))
@@ -564,7 +582,9 @@ data TypeInstanceBody
   -- dictionary for the type under the newtype.
   | ExplicitInstance [Declaration]
   -- ^ This is a regular (explicit) instance
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance ToJSON TypeInstanceBody
 
 mapTypeInstanceBody :: ([Declaration] -> [Declaration]) -> TypeInstanceBody -> TypeInstanceBody
 mapTypeInstanceBody f = runIdentity . traverseTypeInstanceBody (Identity . f)
@@ -691,13 +711,16 @@ flattenDecls = concatMap flattenOne
 --
 data Guard = ConditionGuard Expr
            | PatternGuard Binder Expr
-           deriving (Show)
+           deriving (Show, Generic)
+instance ToJSON Guard
 
 -- |
 -- The right hand side of a binder in value declarations
 -- and case expressions.
 data GuardedExpr = GuardedExpr [Guard] Expr
-                 deriving (Show)
+                 deriving (Show, Generic)
+
+instance ToJSON GuardedExpr
 
 pattern MkUnguarded :: Expr -> GuardedExpr
 pattern MkUnguarded e = GuardedExpr [] e
@@ -823,7 +846,9 @@ data Expr
   -- A value with source position information
   --
   | PositionedValue SourceSpan [Comment] Expr
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance ToJSON Expr
 
 -- |
 -- Metadata that tells where a let binding originated
@@ -837,7 +862,9 @@ data WhereProvenance
   -- The let binding was always a let binding
   --
   | FromLet
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance ToJSON WhereProvenance
 
 -- |
 -- An alternative in a case statement
@@ -851,7 +878,9 @@ data CaseAlternative = CaseAlternative
     -- The result expression or a collect of guarded expressions
     --
   , caseAlternativeResult :: [GuardedExpr]
-  } deriving (Show)
+  } deriving (Show, Generic)
+
+instance ToJSON CaseAlternative
 
 -- |
 -- A statement in a do-notation block
@@ -873,7 +902,9 @@ data DoNotationElement
   -- A do notation element with source position information
   --
   | PositionedDoNotationElement SourceSpan [Comment] DoNotationElement
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance ToJSON DoNotationElement
 
 
 -- For a record update such as:
@@ -900,13 +931,17 @@ data DoNotationElement
 --
 
 newtype PathTree t = PathTree (AssocList PSString (PathNode t))
-  deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
+  deriving (Show, Eq, Ord, Functor, Foldable, Traversable, Generic)
+
+instance ToJSON t => ToJSON (PathTree t)
 
 data PathNode t = Leaf t | Branch (PathTree t)
-  deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
+  deriving (Show, Eq, Ord, Functor, Foldable, Traversable, Generic)
+instance ToJSON t => ToJSON (PathNode t)
 
 newtype AssocList k t = AssocList { runAssocList :: [(k, t)] }
-  deriving (Show, Eq, Ord, Foldable, Functor, Traversable)
+  deriving (Show, Eq, Ord, Foldable, Functor, Traversable, Generic)
+instance (ToJSON k, ToJSON t) => ToJSON (AssocList k t)
 
 $(deriveJSON (defaultOptions { sumEncoding = ObjectWithSingleField }) ''DeclarationRef)
 $(deriveJSON (defaultOptions { sumEncoding = ObjectWithSingleField }) ''ImportDeclarationType)

@@ -11,6 +11,7 @@ import           Control.Monad
 import qualified Data.Aeson as A
 import           Data.Bool (bool)
 import qualified Data.ByteString.Lazy.UTF8 as LBU8
+import qualified Data.ByteString.Lazy.Char8 as BSC8
 import           Data.List (intercalate)
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -27,6 +28,8 @@ import           System.Directory (getCurrentDirectory)
 import           System.FilePath.Glob (glob)
 import           System.IO (hPutStr, hPutStrLn, stderr)
 import           System.IO.UTF8 (readUTF8FileT)
+import           Control.Monad.IO.Class (liftIO)
+import           Data.Foldable (for_)
 
 data PSCMakeOptions = PSCMakeOptions
   { pscmInput        :: [FilePath]
@@ -66,6 +69,11 @@ compile PSCMakeOptions{..} = do
   moduleFiles <- readInput input
   (makeErrors, makeWarnings) <- runMake pscmOpts $ do
     ms <- P.parseModulesFromFiles id moduleFiles
+    for_ ms (\(fp, module') ->
+      liftIO $
+        BSC8.writeFile
+          (fp <> ".ast")
+          (A.encode module'))
     let filePathMap = M.fromList $ map (\(fp, P.Module _ _ mn _ _) -> (mn, Right fp)) ms
     foreigns <- inferForeignModules filePathMap
     let makeActions = buildMakeActions pscmOutputDir filePathMap foreigns pscmUsePrefix

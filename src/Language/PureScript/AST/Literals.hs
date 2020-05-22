@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 -- |
 -- The core functional representation for literal values.
 --
@@ -5,6 +7,8 @@ module Language.PureScript.AST.Literals where
 
 import Prelude.Compat
 import Language.PureScript.PSString (PSString)
+import Data.Aeson (ToJSON)
+import GHC.Generics (Generic)
 
 -- |
 -- Data type for literal values. Parameterised so it can be used for Exprs and
@@ -35,4 +39,6 @@ data Literal a
   -- An object literal
   --
   | ObjectLiteral [(PSString, a)]
-  deriving (Eq, Ord, Show, Functor)
+  deriving (Eq, Ord, Show, Functor, Generic)
+
+instance ToJSON a => ToJSON (Literal a)

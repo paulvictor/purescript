@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveFoldable    #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE DeriveAnyClass #-}
 module Language.PureScript.TypeClassDictionaries where
 
 import Prelude.Compat
@@ -8,6 +9,7 @@ import Prelude.Compat
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 import Data.Text (Text, pack)
+import Data.Aeson(ToJSON)
 
 import Language.PureScript.Names
 import Language.PureScript.Types
@@ -35,6 +37,7 @@ data TypeClassDictionaryInScope v
     deriving (Show, Functor, Foldable, Traversable, Generic)
 
 instance NFData v => NFData (TypeClassDictionaryInScope v)
+instance ToJSON v => ToJSON (TypeClassDictionaryInScope v)
 
 type NamedDict = TypeClassDictionaryInScope (Qualified Ident)
 

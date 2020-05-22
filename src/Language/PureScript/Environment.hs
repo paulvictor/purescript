@@ -26,6 +26,8 @@ import           Language.PureScript.Names
 import           Language.PureScript.TypeClassDictionaries
 import           Language.PureScript.Types
 import qualified Language.PureScript.Constants as C
+import Data.Aeson(ToJSON, ToJSONKey)
+import Data.Aeson.Encoding.Internal(text)
 
 -- | The @Environment@ defines all values and types which are currently in scope:
 data Environment = Environment
@@ -49,6 +51,10 @@ data Environment = Environment
   } deriving (Show, Generic)
 
 instance NFData Environment
+instance (ToJSON a, Show a) => ToJSONKey (Maybe a) where
+  toJSONKey =
+    A.ToJSONKeyText (T.pack . maybe "No ModuleName" show) (text . maybe "No ModuleName" (T.pack . show))
+instance ToJSON Environment
 
 -- | Information about a type class
 data TypeClassData = TypeClassData
@@ -72,6 +78,7 @@ data TypeClassData = TypeClassData
   } deriving (Show, Generic)
 
 instance NFData TypeClassData
+instance ToJSON TypeClassData
 
 -- | A functional dependency indicates a relationship between two sets of
 -- type arguments in a class declaration.
@@ -181,6 +188,7 @@ data NameVisibility
   deriving (Show, Eq, Generic)
 
 instance NFData NameVisibility
+instance ToJSON NameVisibility
 
 -- | A flag for whether a name is for an private or public value - only public values will be
 -- included in a generated externs file.
@@ -193,6 +201,8 @@ data NameKind
   | External
   -- ^ A name for member introduced by foreign import
   deriving (Show, Eq, Generic)
+
+instance ToJSON NameKind
 
 instance NFData NameKind
 
