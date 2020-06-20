@@ -26,6 +26,7 @@ import           Options.Applicative (Parser)
 import qualified Options.Applicative as Opts
 import           SourceMap
 import           SourceMap.Types
+import Data.Foldable (for_)
 
 -- | Command line options.
 data Options = Options
@@ -40,7 +41,7 @@ data Options = Options
 -- | The main application function.
 -- This function parses the input files, performs dead code elimination, filters empty modules
 -- and generates and prints the final Javascript bundle.
-app :: (MonadError ErrorMessage m, MonadIO m) => Options -> m (Maybe SourceMapping, String)
+app :: (MonadError ErrorMessage m, MonadIO m) => Options -> m (Maybe SourceMapping, String, [(String, String)])
 app Options{..} = do
   inputFiles <- concat <$> mapM (liftIO . glob) optionsInputFiles
   when (null inputFiles) . liftIO $ do
@@ -115,7 +116,10 @@ command = run <$> (Opts.helper <*> options) where
       Left err -> do
         hPutStr stderr (unlines (printErrorMessage err))
         exitFailure
-      Right (sourcemap, js) ->
+      Right (sourcemap, js, moduleNamesAndContents) -> do
+        createDirectoryIfMissing True "individual"
+        for_ moduleNamesAndContents (\(mn, cnts) ->
+          writeUTF8File ("individual/" <> mn) cnts)
         case optionsOutputFile opts of
           Just outputFile -> do
             createDirectoryIfMissing True (takeDirectory outputFile)

@@ -527,8 +527,11 @@ codeGen :: Maybe String -- ^ main module
         -> String -- ^ namespace
         -> [Module] -- ^ input modules
         -> Maybe String -- ^ output filename
-        -> (Maybe SourceMapping, String)
-codeGen optionsMainModule optionsNamespace ms outFileOpt = (fmap sourceMapping outFileOpt, rendered)
+        -> (Maybe SourceMapping, String, [(String, String)])
+codeGen optionsMainModule optionsNamespace ms outFileOpt =
+  (fmap sourceMapping outFileOpt
+  , rendered
+  , ((\m@(Module (ModuleIdentifier mn mt) _ _) -> ((mn <> "." <> show mt), renderToString (JSAstProgram (fst $ moduleToJS m) JSNoAnnot))) <$> ms))
   where
   rendered = renderToString (JSAstProgram (prelude : concatMap fst modulesJS ++ maybe [] runMain optionsMainModule) JSNoAnnot)
 
@@ -730,7 +733,7 @@ bundleSM :: (MonadError ErrorMessage m)
        -> Maybe String -- ^ An optional main module.
        -> String -- ^ The namespace (e.g. PS).
        -> Maybe FilePath -- ^ The output file name (if there is one - in which case generate source map)
-       -> m (Maybe SourceMapping, String)
+       -> m (Maybe SourceMapping, String, [(String, String)])
 bundleSM inputStrs entryPoints mainModule namespace outFilename = do
   let mid (a,_,_) = a
   forM_ mainModule $ \mname ->
@@ -759,4 +762,4 @@ bundle :: (MonadError ErrorMessage m)
        -> Maybe String -- ^ An optional main module.
        -> String -- ^ The namespace (e.g. PS).
        -> m String
-bundle inputStrs entryPoints mainModule namespace = snd <$> bundleSM (map (\(a,b) -> (a,Nothing,b)) inputStrs) entryPoints mainModule namespace Nothing
+bundle inputStrs entryPoints mainModule namespace = (\(_, b, _) -> b) <$> bundleSM (map (\(a,b) -> (a,Nothing,b)) inputStrs) entryPoints mainModule namespace Nothing
